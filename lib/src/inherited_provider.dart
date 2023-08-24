@@ -243,7 +243,10 @@ extension SelectContext on BuildContext {
   /// ```
   ///
   /// It is fine to call `select` multiple times.
-  R select<T, R>(R Function(T value) selector) {
+  R select<T, R>(
+    R Function(T value) selector, {
+    bool Function(T)? searchCallback,
+  }) {
     assert(widget is! SliverWithKeepAliveWidget, '''
     Tried to use context.select inside a SliverList/SliderGridView.
 
@@ -269,18 +272,40 @@ Tried to use `context.select` outside of the `build` method of a widget.
 Any usage other than inside the `build` method of a widget are not supported.
 ''');
 
-    final inheritedElement = Provider._inheritedElementOf<T>(this);
-    try {
-      final value = inheritedElement?.value;
-      if (value is! T) {
-        throw ProviderNullException(T, widget.runtimeType);
+    var inheritedElement = Provider._inheritedElementOf<T>(this);
+
+    var value = inheritedElement?.value;
+    Provider._checkType(this, value);
+
+    if(searchCallback != null) {
+      while(true) {
+        if (inheritedElement == null) {
+          throw ProviderNotFoundException(T, widget.runtimeType);
+        }
+
+        if (searchCallback(value as T)) {
+          // Got a value
+          break;
+        }
+
+        // Looking for another value
+        inheritedElement = Provider._inheritedElement2Of<T>(inheritedElement);
+        value = inheritedElement?.value;
+        Provider._checkType(this, value);
       }
+    }
+
+    try {
+      // final value = inheritedElement?.value;
+      // if (value is! T) {
+      //   throw ProviderNullException(T, widget.runtimeType);
+      // }
 
       assert(() {
         _debugIsSelecting = true;
         return true;
       }());
-      final selected = selector(value);
+      final selected = selector(value as T);
 
       if (inheritedElement != null) {
         dependOnInheritedElement(

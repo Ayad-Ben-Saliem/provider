@@ -323,7 +323,7 @@ The context used was: $context
         inheritedElement = _inheritedElement2Of<T>(inheritedElement);
         value = inheritedElement?.value;
         _checkType(context, value);
-      };
+      }
     } else {
       if (listen) {
         // bind context with the element
